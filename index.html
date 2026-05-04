@@ -167,6 +167,12 @@ header{background:#1a73e8;color:#fff;padding:12px 15px;position:sticky;top:0;z-i
 .badge-cur{background:var(--pri-lt);color:var(--pri)}
 .drag-handle{cursor:grab;font-size:1.1rem;color:var(--txt2);padding:6px 4px 6px 2px;flex-shrink:0;line-height:1;user-select:none;-webkit-user-select:none;touch-action:none}
 .drag-handle:active{cursor:grabbing;color:var(--pri)}
+.svc-section-hdr{display:flex;align-items:center;gap:8px;font-size:.72rem;font-weight:700;text-transform:uppercase;letter-spacing:.05em;color:var(--txt2);margin:12px 0 6px 2px}
+.svc-section-hdr .svc-sec-line{flex:1;height:1px;background:var(--bdr)}
+.svc-section-paid .svc-section-hdr{color:var(--ok)}
+.svc-section-paid .svc-sec-line{background:var(--ok);opacity:.4}
+.svc-list-group{min-height:44px}
+.svc-list-group.empty-group{border:2px dashed var(--bdr);border-radius:10px;display:flex;align-items:center;justify-content:center;color:var(--txt2);font-size:.78rem;padding:12px;margin-bottom:8px}
 .svc-ghost{opacity:.35;background:var(--pri-lt)!important;border-color:var(--pri)!important}
 .svc-chosen{box-shadow:0 6px 20px rgba(0,0,0,.18)!important;transform:scale(1.01);z-index:10}
 .svc-drag{box-shadow:0 10px 30px rgba(0,0,0,.25)!important}
@@ -401,6 +407,33 @@ function changeMonth(delta){
   currentDate.setMonth(currentDate.getMonth()+delta);
   document.getElementById('monthLabel').textContent=fmtM(currentDate);
   renderFijos();
+}
+
+function makeSvcCard(svc,e){
+  const amt=parseFloat(e.amount)||0;
+  const div=document.createElement('div');
+  div.className='svc-item'+(e.paid?' paid':'');
+  div.dataset.id=svc.id;
+  div.innerHTML=
+    '<div class="svc-row">'+
+    '<div class="drag-handle">&#8942;&#8942;</div>'+
+    '<div class="svc-ico">'+svc.icon+'</div>'+
+    '<div class="svc-info">'+
+      '<div class="svc-name">'+svc.name+'</div>'+
+      '<div class="svc-disp">'+(e.paid?(amt>0?'&#10003; '+fmtA(amt):'&#10003; Pagado'):(amt>0?fmtA(amt)+' \u2014 pendiente':'Sin monto'))+'</div>'+
+    '</div>'+
+    '<div class="svc-acts">'+
+      '<button class="del-s" onclick="deleteSvc(\''+svc.id+'\')">\uD83D\uDDD1\uFE0F</button>'+
+      '<button class="chk-btn '+(e.paid?'ok-btn':'')+'" onclick="togglePaid(\''+svc.id+'\')">'+
+        (e.paid?'&#10003;':'&#9675;')+
+      '</button>'+
+    '</div>'+
+    '</div>'+
+    '<div class="amt-area '+(!e.paid?'vis':'')+'" id="area-'+svc.id+'\">'+
+      '<input class="amt-inp" type="number" inputmode="decimal" placeholder="Monto ($)" id="amt-'+svc.id+'\" value="'+(e.amount||'')+'\" onkeydown="if(event.key===\'Enter\')saveAmt(\''+svc.id+'\')"/>'+
+      '<button class="sv-btn" onclick="saveAmt(\''+svc.id+'\')">Guardar</button>'+
+    '</div>';
+  return div;
 }
 
 function renderFijos(){
@@ -685,25 +718,39 @@ function renderComp(){
 
 // ── SORTABLE ────────────────────────────────────────────────
 function initSortable(){
-  const el=document.getElementById('svcList');
-  if(!el||!window.Sortable)return;
-  if(el._sortable)el._sortable.destroy();
-  el._sortable=new Sortable(el,{
-    animation:200,
-    handle:'.drag-handle',
-    ghostClass:'svc-ghost',
-    chosenClass:'svc-chosen',
-    dragClass:'svc-drag',
-    delay:120,
-    delayOnTouchOnly:true,
-    touchStartThreshold:4,
-    onEnd:function(evt){
-      if(evt.oldIndex===evt.newIndex)return;
-      const svcs=getServices();
-      const moved=svcs.splice(evt.oldIndex,1)[0];
-      svcs.splice(evt.newIndex,0,moved);
-      saveServices(svcs);
-    }
+  if(!window.Sortable)return;
+  ['grp-pending','grp-paid'].forEach(function(groupId){
+    const el=document.getElementById(groupId);
+    if(!el||el.classList.contains('empty-group'))return;
+    if(el._sortable)el._sortable.destroy();
+    el._sortable=new Sortable(el,{
+      group:'services',
+      animation:200,
+      handle:'.drag-handle',
+      ghostClass:'svc-ghost',
+      chosenClass:'svc-chosen',
+      dragClass:'svc-drag',
+      delay:120,
+      delayOnTouchOnly:true,
+      touchStartThreshold:4,
+      onEnd:function(){
+        // Read new order from DOM across both groups
+        const newOrder=[];
+        ['grp-pending','grp-paid'].forEach(function(gid){
+          const g=document.getElementById(gid);
+          if(!g)return;
+          Array.from(g.querySelectorAll('.svc-item')).forEach(function(el){
+            newOrder.push(el.dataset.id);
+          });
+        });
+        const svcs=getServices();
+        const map={};svcs.forEach(function(s){map[s.id]=s;});
+        const reordered=newOrder.map(function(id){return map[id];}).filter(Boolean);
+        // Keep any svcs not in DOM (shouldn't happen but safe)
+        svcs.forEach(function(s){if(!newOrder.includes(s.id))reordered.push(s);});
+        saveServices(reordered);
+      }
+    });
   });
 }
 // ── SYNC (Firebase Firestore) ──────────────────────────────
