@@ -165,6 +165,11 @@ header{background:#1a73e8;color:#fff;padding:12px 15px;position:sticky;top:0;z-i
 .ldot-g{background:var(--ok)}
 .badge{display:inline-block;padding:1px 6px;border-radius:9px;font-size:.63rem;font-weight:600;margin-left:4px}
 .badge-cur{background:var(--pri-lt);color:var(--pri)}
+.drag-handle{cursor:grab;font-size:1.1rem;color:var(--txt2);padding:6px 4px 6px 2px;flex-shrink:0;line-height:1;user-select:none;-webkit-user-select:none;touch-action:none}
+.drag-handle:active{cursor:grabbing;color:var(--pri)}
+.svc-ghost{opacity:.35;background:var(--pri-lt)!important;border-color:var(--pri)!important}
+.svc-chosen{box-shadow:0 6px 20px rgba(0,0,0,.18)!important;transform:scale(1.01);z-index:10}
+.svc-drag{box-shadow:0 10px 30px rgba(0,0,0,.25)!important}
 .empty-state{text-align:center;padding:30px 20px;color:var(--txt2)}
 .empty-state .ico{font-size:2.4rem;margin-bottom:8px}
 .modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,.55);z-index:500;display:flex;align-items:center;justify-content:center;padding:16px}
@@ -412,6 +417,7 @@ function renderFijos(){
     div.className='svc-item'+(e.paid?' paid':'');
     div.innerHTML=
       '<div class="svc-row">'+
+      '<div class="drag-handle">&#8942;&#8942;</div>'+
         '<div class="svc-ico">'+svc.icon+'</div>'+
         '<div class="svc-info">'+
           '<div class="svc-name">'+svc.name+'</div>'+
@@ -432,6 +438,7 @@ function renderFijos(){
   document.getElementById('cntPaid').textContent=paid;
   document.getElementById('cntPend').textContent=pending;
   document.getElementById('totPaid').textContent=fmtA(paidTotal);
+  setTimeout(initSortable,0);
 }
 
 function togglePaid(id){
@@ -675,6 +682,30 @@ function renderComp(){
 }
 
 
+
+// ── SORTABLE ────────────────────────────────────────────────
+function initSortable(){
+  const el=document.getElementById('svcList');
+  if(!el||!window.Sortable)return;
+  if(el._sortable)el._sortable.destroy();
+  el._sortable=new Sortable(el,{
+    animation:200,
+    handle:'.drag-handle',
+    ghostClass:'svc-ghost',
+    chosenClass:'svc-chosen',
+    dragClass:'svc-drag',
+    delay:120,
+    delayOnTouchOnly:true,
+    touchStartThreshold:4,
+    onEnd:function(evt){
+      if(evt.oldIndex===evt.newIndex)return;
+      const svcs=getServices();
+      const moved=svcs.splice(evt.oldIndex,1)[0];
+      svcs.splice(evt.newIndex,0,moved);
+      saveServices(svcs);
+    }
+  });
+}
 // ── SYNC (Firebase Firestore) ──────────────────────────────
 let db=null,syncListener=null,isSyncing=false,syncTimer=null;
 
@@ -781,5 +812,6 @@ renderFijos();
 document.getElementById('ggMonthTitle').textContent=fmtM(calDate);
 initSync();
 </script>
+<script src="https://cdn.jsdelivr.net/npm/sortablejs@1.15.2/Sortable.min.js"></script>
 </body>
 </html>
