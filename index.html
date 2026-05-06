@@ -202,7 +202,13 @@ header{background:#1a73e8;color:#fff;padding:12px 15px;flex-shrink:0;z-index:200
     <h1>💰 Mis Gastos</h1>
     <p>Seguimiento mensual</p>
   </div>
-  <div style="display:flex;align-items:center;gap:8px"><span id="syncDot" onclick="openSyncModal()" title="Sync no configurado" style="width:10px;height:10px;border-radius:50%;background:#9aa0a6;cursor:pointer;flex-shrink:0;transition:background .3s"></span><button class="theme-btn" id="themeBtn" onclick="toggleTheme()">🌙</button></div>
+  <div style="display:flex;align-items:center;gap:8px">
+    <span id="syncDot" onclick="openSyncModal()" style="display:inline-flex;align-items:center;gap:5px;padding:3px 10px;border-radius:20px;font-size:.68rem;font-weight:600;cursor:pointer;transition:background .3s,color .3s;background:rgba(255,255,255,.15);color:#fff;white-space:nowrap">
+      <span id="syncDotIcon" style="width:6px;height:6px;border-radius:50%;background:#fff;flex-shrink:0;transition:background .3s"></span>
+      <span id="syncDotLabel">Conectando...</span>
+    </span>
+    <button class="theme-btn" id="themeBtn" onclick="toggleTheme()">🌙</button>
+  </div>
 </header>
 
 <div id="fixedMonthNav">
@@ -808,14 +814,22 @@ function loadScript(src){
 }
 
 function updateDot(state){
-  const dot=document.getElementById('syncDot');
+  const pill=document.getElementById('syncDot');
+  const icon=document.getElementById('syncDotIcon');
+  const label=document.getElementById('syncDotLabel');
   const mdot=document.getElementById('syncModalDot');
   const txt=document.getElementById('syncStatusTxt');
-  const c={connecting:'#fbbc04',ok:'#34a853',error:'#ea4335'};
-  const t={connecting:'Conectando a Firebase...',ok:'Sincronizado ✓ — datos seguros en la nube',error:'Error de conexión — revisá tu internet'};
-  if(dot)dot.style.background=c[state]||'#9aa0a6';
-  if(mdot)mdot.style.background=c[state]||'#9aa0a6';
-  if(txt)txt.textContent=t[state]||'';
+  const cfg={
+    connecting:{bg:'rgba(255,255,255,.15)',iconBg:'#fbbc04',text:'Sincronizando...'},
+    ok:        {bg:'rgba(255,255,255,.18)',iconBg:'#34a853',text:'Conectado'},
+    error:     {bg:'rgba(255,255,255,.15)',iconBg:'#ea4335',text:'Sin conexión'}
+  };
+  const s=cfg[state]||cfg.connecting;
+  if(pill){pill.style.background=s.bg;}
+  if(icon){icon.style.background=s.iconBg;}
+  if(label){label.textContent=s.text;}
+  if(mdot){mdot.style.background=s.iconBg;}
+  if(txt){txt.textContent=state==='ok'?'Sincronizado ✓ — datos seguros en la nube':state==='error'?'Error de conexión — revisá tu internet':'Conectando a Firebase...';}
 }
 
 function openSyncModal(){
