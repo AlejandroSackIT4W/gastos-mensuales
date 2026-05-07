@@ -790,10 +790,13 @@ function initSortable(){
     });
   });
 }
-// ── SYNC (Firebase Firestore) ──────────────────────────────
+// ── SYNC (Firebase Firestore - config fija) ───────────────
+const FB_CONFIG={
+  apiKey:"AIzaSyCjbHr6e-2ztEH7ORCy5ct-UA3R0FWnatA",
+  projectId:"gastos-app-43324"
+};
+const FB_DOC="alejandro-gastos";
 let db=null,syncListener=null,isSyncing=false,syncTimer=null;
-
-function getSyncCfg(){return JSON.parse(localStorage.getItem('syncConfig')||'null');}
 
 function schedulePush(){
   if(!db)return;
@@ -802,17 +805,15 @@ function schedulePush(){
 }
 
 async function initSync(){
-  const cfg=getSyncCfg();
-  if(!cfg||!cfg.apiKey||!cfg.projectId||!cfg.syncCode){updateDot('off');return;}
   updateDot('connecting');
   try{
     await loadScript('https://www.gstatic.com/firebasejs/9.22.2/firebase-app-compat.js');
     await loadScript('https://www.gstatic.com/firebasejs/9.22.2/firebase-firestore-compat.js');
     if(!window.firebase.apps.length){
-      window.firebase.initializeApp({apiKey:cfg.apiKey,projectId:cfg.projectId});
+      window.firebase.initializeApp(FB_CONFIG);
     }
     db=window.firebase.firestore();
-    const ref=db.collection('gastos').doc(cfg.syncCode);
+    const ref=db.collection('gastos').doc(FB_DOC);
     if(syncListener)syncListener();
     syncListener=ref.onSnapshot(snap=>{
       if(!isSyncing&&snap.exists){
@@ -830,11 +831,10 @@ async function initSync(){
 }
 
 async function pushToFirebase(){
-  const cfg=getSyncCfg();
-  if(!db||!cfg)return;
+  if(!db)return;
   isSyncing=true;
   try{
-    await db.collection('gastos').doc(cfg.syncCode).set({
+    await db.collection('gastos').doc(FB_DOC).set({
       gastosData:getData(),gastosGen:getGG(),services:getServices(),
       ts:window.firebase.firestore.FieldValue.serverTimestamp()
     });
@@ -861,36 +861,16 @@ function updateDot(state){
 }
 
 function openSyncModal(){
-  const cfg=getSyncCfg()||{};
-  document.getElementById('syncApiKey').value=cfg.apiKey||'';
-  document.getElementById('syncProjectId').value=cfg.projectId||'';
-  document.getElementById('syncCodeInp').value=cfg.syncCode||'';
-  const connected=!!cfg.apiKey;
-  document.getElementById('discBtn').style.display=connected?'':'none';
-  const row=document.getElementById('syncStatusRow');
-  row.style.display=connected?'flex':'none';
-  document.getElementById('syncStatusTxt').textContent=connected?'Conectado con código: '+cfg.syncCode:'';
-  document.getElementById('syncModal').style.display='flex';
+  const states={connecting:'Conectando a Firebase…',ok:'✅ Sincronizado — datos seguros en la nube',error:'⚠️ Error de conexión — revisá tu internet'};
+  const pill=document.getElementById('syncDot');
+  const cur=pill?pill.className:'';
+  const state=cur.includes('ok')?'ok':cur.includes('error')?'error':'connecting';
+  alert(states[state]||'Conectando…');
 }
 
-function closeSyncModal(){document.getElementById('syncModal').style.display='none';}
-
-function saveSync(){
-  const apiKey=document.getElementById('syncApiKey').value.trim();
-  const projectId=document.getElementById('syncProjectId').value.trim();
-  const syncCode=document.getElementById('syncCodeInp').value.trim().toLowerCase().replace(/\s+/g,'-');
-  if(!apiKey||!projectId||!syncCode){alert('Completá todos los campos');return;}
-  localStorage.setItem('syncConfig',JSON.stringify({apiKey,projectId,syncCode}));
-  closeSyncModal();
-  location.reload();
-}
-
-function disconnectSync(){
-  if(!confirm('¿Desactivar sincronización?'))return;
-  if(syncListener)syncListener();
-  localStorage.removeItem('syncConfig');
-  db=null;closeSyncModal();updateDot('off');
-}
+function closeSyncModal(){}
+function saveSync(){}
+function disconnectSync(){}
 // ── INIT ───────────────────────────────────────────────────
 initTheme();
 document.getElementById('monthLabel').textContent=fmtM(currentDate);
