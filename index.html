@@ -33,6 +33,11 @@ header{background:#1a73e8;color:#fff;padding:12px 15px;position:sticky;top:0;z-i
 .hdr-title p{font-size:.7rem;opacity:.85;margin-top:1px}
 .theme-btn{background:rgba(255,255,255,.2);border:none;border-radius:50%;width:36px;height:36px;cursor:pointer;font-size:1.1rem;display:flex;align-items:center;justify-content:center;transition:background .2s;flex-shrink:0}
 .theme-btn:hover{background:rgba(255,255,255,.32)}
+.sync-pill{display:flex;align-items:center;gap:5px;background:rgba(255,255,255,.18);border:1px solid rgba(255,255,255,.35);border-radius:20px;padding:5px 11px;font-size:.72rem;font-weight:600;color:#fff;cursor:pointer;transition:background .2s;white-space:nowrap;flex-shrink:0}
+.sync-pill:hover{background:rgba(255,255,255,.3)}
+.sync-pill.ok{background:rgba(52,168,83,.35);border-color:rgba(52,168,83,.6)}
+.sync-pill.error{background:rgba(234,67,53,.35);border-color:rgba(234,67,53,.6)}
+.sync-pill.connecting{background:rgba(251,188,4,.25);border-color:rgba(251,188,4,.5)}
 
 /* MONTH NAV */
 #fixedMonthNav{display:flex;align-items:center;justify-content:space-between;background:var(--card);padding:9px 15px;border-bottom:1px solid var(--bdr);position:sticky;top:61px;z-index:99;transition:background .25s,border-color .25s}
@@ -202,7 +207,10 @@ header{background:#1a73e8;color:#fff;padding:12px 15px;position:sticky;top:0;z-i
     <h1>💰 Mis Gastos</h1>
     <p>Seguimiento mensual</p>
   </div>
-  <div style="display:flex;align-items:center;gap:8px"><span id="syncDot" onclick="openSyncModal()" title="Sync no configurado" style="width:10px;height:10px;border-radius:50%;background:#9aa0a6;cursor:pointer;flex-shrink:0;transition:background .3s"></span><button class="theme-btn" id="themeBtn" onclick="toggleTheme()">🌙</button></div>
+  <div style="display:flex;align-items:center;gap:8px">
+    <button id="syncDot" onclick="openSyncModal()" class="sync-pill">☁️ <span id="syncPillTxt">Sync</span></button>
+    <button class="theme-btn" id="themeBtn" onclick="toggleTheme()">🌙</button>
+  </div>
 </header>
 
 <div id="fixedMonthNav">
@@ -842,11 +850,14 @@ function loadScript(src){
 }
 
 function updateDot(state){
-  const dot=document.getElementById('syncDot');if(!dot)return;
-  const c={off:'#9aa0a6',connecting:'#fbbc04',ok:'#34a853',error:'#ea4335'};
-  const t={off:'Sync no configurado — tocá para configurar',connecting:'Conectando...',ok:'Sincronizado ✓',error:'Error de conexión — tocá para revisar'};
-  dot.style.background=c[state]||c.off;
-  dot.title=t[state]||t.off;
+  const pill=document.getElementById('syncDot');if(!pill)return;
+  const icons={off:'☁️',connecting:'🔄',ok:'✅',error:'⚠️'};
+  const labels={off:'Sync',connecting:'Conectando…',ok:'Sincronizado',error:'Error sync'};
+  const txt=document.getElementById('syncPillTxt');
+  pill.className='sync-pill'+(state==='ok'?' ok':state==='error'?' error':state==='connecting'?' connecting':'');
+  if(txt)txt.textContent=labels[state]||labels.off;
+  pill.querySelector('span')&&(pill.childNodes[0].textContent=icons[state]||icons.off);
+  pill.title=labels[state]||labels.off;
 }
 
 function openSyncModal(){
